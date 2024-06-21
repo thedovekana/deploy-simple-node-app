@@ -1,5 +1,6 @@
 # Use the official Node.js image from Docker Hub
-FROM node
+# It is important to specify the version of node to use during the project. a version earlier or higher than the version currently used could cause unwanted errors.😊😊😊
+FROM node:22
 
 # Set the working directory inside the container
 WORKDIR /app
