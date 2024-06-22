@@ -1,0 +1,47 @@
+- name: Determine the most recent Docker image tag from Docker Hub
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    docker_repo: "thedove"
+    image_name: "node-webapp"
+    tag_file: "/tmp/latest_tag.yml"
+  tasks:
+    - name: Fetch Docker Hub tags
+      uri:
+        url: "https://hub.docker.com/v2/repositories/{{ docker_repo }}/{{ image_name }}/tags/?page_size=2"
+        method: GET
+        return_content: yes
+        status_code: 200
+      register: docker_tags
+
+    - name: Debug Docker Hub response
+      debug:
+        var: docker_tags
+
+    - name: Ensure response has results
+      fail:
+        msg: "No tags found for {{ docker_repo }}/{{ image_name }}"
+      when: docker_tags.json.results | length == 0
+
+    - name: Parse JSON response
+      set_fact:
+        tags_info: "{{ docker_tags.json.results }}"
+
+    - name: Debug parsed tags
+      debug:
+        var: tags_info
+
+    - name: Find the most recent tag
+      set_fact:
+        recent_tag: "{{ tags_info | sort(attribute='last_updated', reverse=true) | first }}"
+
+    - name: Show the most recent tag
+      debug:
+        msg: "The most recent Docker image tag is {{ recent_tag.name }}"
+
+    - name: Save the most recent tag to a file
+      copy:
+        content: "latest_tag: {{ recent_tag.name }}"
+        dest: "{{ tag_file }}"
+

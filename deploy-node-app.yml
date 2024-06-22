@@ -1,0 +1,33 @@
+- name: Deploy Docker image with the most recent tag
+  hosts: docker-servers
+  gather_facts: no
+  vars:
+    tag_file: "/tmp/latest_tag.yml"
+    docker_repo: "thedove"
+    image_name: "node-webapp"
+  tasks:
+    - name: Read the most recent tag from the file
+      include_vars:
+        file: "{{ tag_file }}"
+
+    - name: Debug the latest tag
+      debug:
+        var: latest_tag
+
+    - name: Stop and remove running containers
+      shell:  docker rm -f $(docker ps -q)
+
+    - name: Pull Docker image with the most recent tag
+      docker_image:
+        name: "{{ docker_repo }}/{{ image_name }}"
+        tag: "{{ latest_tag }}"
+        source: pull
+
+    - name: Run Docker container with the most recent image
+      docker_container:
+        name: my_app_container
+        image: "{{ docker_repo }}/{{ image_name }}:{{ latest_tag }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "8082:3000"
