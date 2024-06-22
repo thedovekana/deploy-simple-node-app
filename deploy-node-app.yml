@@ -1,10 +1,13 @@
+---
 - name: Deploy Docker image with the most recent tag
   hosts: docker-servers
   gather_facts: no
+
   vars:
     tag_file: "/tmp/latest_tag.yml"
     docker_repo: "thedove"
     image_name: "node-webapp"
+
   tasks:
     - name: Read the most recent tag from the file
       include_vars:
@@ -14,8 +17,16 @@
       debug:
         var: latest_tag
 
-    - name: Stop and remove running containers
-      shell:  docker rm -f $(docker ps -q)
+    - name: Check if Docker container is running
+      shell: docker ps -q --filter name="{{ docker_repo }}/{{ image_name }}"
+      register: docker_container_check
+      ignore_errors: true
+
+    - name: Stop and remove container if running
+      docker_container:
+        name: "{{ docker_repo }}/{{ image_name }}"
+        state: absent
+      when: docker_container_check.stdout_lines | length > 0
 
     - name: Pull Docker image with the most recent tag
       docker_image:
